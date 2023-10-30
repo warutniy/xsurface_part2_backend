@@ -150,10 +150,8 @@ class ProductController {
             });
 
         } catch (error) {
-
-            console.log(error);
-            return res.status(400).send('internal error');
-
+            console.log("An Error Occured: " + error.message);
+            return res.status(404).send("An Error Occured: " + error.message);
         };
     };
 
@@ -165,10 +163,8 @@ class ProductController {
             return res.status(200).json({ products: allProducts });
 
         } catch (error) {
-
-            console.log(error);
-            return res.status(400).send('internal error');
-
+            console.log("An Error Occured: " + error.message);
+            return res.status(404).send("An Error Occured: " + error.message);
         };
     };
 
@@ -189,7 +185,8 @@ class ProductController {
             res.status(200).json(files);
 
         } catch (error) {
-            console.log("An Error Occured " + error.message);
+            console.log("An Error Occured: " + error.message);
+            return res.status(404).send("An Error Occured: " + error.message);
         };
     };
 
@@ -224,7 +221,110 @@ class ProductController {
             };
 
         } catch (error) {
-            console.log("An Error Occured " + error.message);
+            console.log("An Error Occured: " + error.message);
+            return res.status(404).send("An Error Occured: " + error.message);
+        };
+    };
+
+    getSelectedSearch = async (req, res) => {
+
+        try {
+            const result = await ProductModel.aggregate([
+                {
+                    '$search': {
+                        'index': 'a_few_fields', 
+                        'compound': {
+                            'should': [
+                            {
+                                'text': {
+                                    'query': req.query.term || ' ', 
+                                    'path': 'productName', 
+                                    'score': {
+                                        'boost': {
+                                            'value': 5
+                                        }
+                                    }, 
+                                    'fuzzy': {
+                                        'maxEdits': 1
+                                    }
+                                }
+                            }, {
+                                'text': {
+                                    'query': req.query.term || ' ', 
+                                    'path': 'code', 
+                                    'fuzzy': {
+                                        'maxEdits': 1
+                                    }
+                                }
+                            }]
+                        }, 
+                        'highlight': {
+                            'path': [
+                                'productName',
+                                'code'
+                            ]
+                        }
+                    }
+                }, {
+                    '$project': {
+                        'images': 1,
+                        'productName': 1, 
+                        'code': 1, 
+                        'price': 1, 
+                        'score': {
+                            '$meta': 'searchScore'
+                        }, 
+                        'highlight': {
+                            '$meta': 'searchHighlights'
+                        }
+                    }
+                }, {
+                    '$limit': 10
+                }
+            ]);
+
+            res.status(200).json({ products: result });
+
+        } catch (error) {
+            console.log("An Error Occured: " + error.message);
+            return res.status(404).send("An Error Occured: " + error.message);
+        };
+    };
+
+    getSelectedSuggestion = async (req, res) => {
+
+        try {
+            const result = await ProductModel.aggregate([
+                {
+                    '$search': {
+                        'index': 'autocomplete_products', 
+                        'autocomplete': {
+                            'query': req.query.term || ' ', 
+                            'path': 'productName', 
+                            // 'fuzzy': {
+                            //     'maxEdits': 1, 
+                            //     'prefixLength': 1
+                            // }
+                        }
+                    }
+                }, {
+                    '$project': {
+                        '_id': 0, 
+                        'productName': 1, 
+                        'score': {
+                            '$meta': 'searchScore'
+                        }
+                    }
+                }, {
+                    '$limit': 10
+                }
+            ]);
+
+            res.status(200).json(result);
+
+        } catch (error) {
+            console.log("An Error Occured: " + error.message);
+            return res.status(404).send("An Error Occured: " + error.message);
         };
     };
     
