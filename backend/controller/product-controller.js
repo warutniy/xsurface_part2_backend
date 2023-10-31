@@ -283,7 +283,10 @@ class ProductController {
                 }
             ]);
 
-            res.status(200).json({ products: result });
+            res.status(200).json({
+                products: result,
+                term: req.query.term
+            });
 
         } catch (error) {
             console.log("An Error Occured: " + error.message);
